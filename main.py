@@ -31,12 +31,15 @@ def memload(paddr, data):
   global memory
 
   # physical offset
-  addr -= 0x8000000
-  assert addr >= 0 and addr < len(memory)
+  paddr -= 0x80000000
+  print(paddr)
+  assert paddr >= 0 and paddr < len(memory)
+  
+  # mem: pre + data + pos
+  memory = memory[:paddr] + data + memory[paddr+len(data):]
 
 def regdump():
   dump = []
-  
   for i in range(33):
     if i==0 or i%8 == 0:
       dump += "\n"
@@ -48,9 +51,9 @@ if __name__ == "__main__":
     if x.endswith(".dump"):
       continue
     with open(x, 'rb') as f:
+      reset()
       print("[test]", x)
       e = ELFFile(f)
       for s in e.iter_segments():
-        reset()
-        print("paddr: %d"%s.header.p_paddr)
+        memload(s.header.p_paddr, s.data())
         regdump() 
