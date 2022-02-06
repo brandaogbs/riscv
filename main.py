@@ -17,7 +17,7 @@ from elftools.elf.elffile import ELFFile
 regfile = [0]*33
 PC = 32
 
-memory = b'\x00'*0x100000 
+memory = b'\x00'*0x10000 
 
 def reset():
   global memory 
@@ -32,16 +32,31 @@ def memload(paddr, data):
 
   # physical offset
   paddr -= 0x80000000
-  print(paddr)
+  #print(paddr)
   assert paddr >= 0 and paddr < len(memory)
   
   # mem: pre + data + pos
   memory = memory[:paddr] + data + memory[paddr+len(data):]
 
+def r32(paddr):
+  paddr -= 0x80000000
+  assert paddr >= 0 and paddr < len(memory)
+  
+  # get the 32-bit instruction (ui, little-endian)
+  return struct.unpack("<I", memory[paddr:paddr+4])[0]
+
+def pipeline():
+  # fetch instruction 
+  ins = r32(regfile[PC])
+  print(hex(ins))
+  regdump()
+
+  return False
+
 def regdump():
   dump = []
   for i in range(33):
-    if i==0 or i%8 == 0:
+    if i!=0 and i%8 == 0:
       dump += "\n"
     dump += " %3s:%08x" % ("x%d"%i, regfile[i])
   print(''.join(dump))
@@ -56,4 +71,9 @@ if __name__ == "__main__":
       e = ELFFile(f)
       for s in e.iter_segments():
         memload(s.header.p_paddr, s.data())
-        regdump() 
+      
+      regfile[PC] = 0x80000000 
+      while pipeline():
+        pass
+    break
+
