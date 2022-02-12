@@ -74,6 +74,8 @@ class Opcode(Enum):
   SYSTEM = 0b1110011
 
 class Funct3(Enum):
+  # http://pages.hmc.edu/harris/ddca/ddcarv/DDCArv_AppB_Harris.pdf
+  # https://riscv.org/wp-content/uploads/2019/12/riscv-spec-20191213.pdf
   ADD  = SUB = ADDI = 0b000
   SLLI = 0b001
   SLT  = SLTI = 0b010
@@ -123,20 +125,43 @@ def rv32i(paddr):
   # get the 32-bit instruction (ui, little-endian)
   return struct.unpack("<I", memory[paddr:paddr+4])[0]
 
+def sign_ext(h, l):
+  if h & (1 << (l-1)):
+    h -= (1 << l)
+  return h
+
 def decode(ins, sb, eb):
   return (ins >> eb) & ((1 << (sb-eb+1))-1)
 
 def pipeline():
-  # fetch instruction 
+  ### fetch instruction 
   ins = rv32i(regfile[PC])
 
-  # instruction decode
+  ### instruction decode
+  # decode opcode 
   opcode = Opcode(decode(ins, 6, 0))
- 
+  
+  #decode immediates for differents formats
+  imm_i = sign_ext(decode(ins,31,20), 12)
+  imm_s = sign_ext(decode(ins,31,25)<<5 | decode(ins,11,7), 12)
+  imm_b = sign_ext(decode(ins,32,31)<<12 | decode(ins,30,25)<<5 | decode(ins,11,8)<<1 | decode(ins,8,7)<<11,13) 
+  imm_u = sign_ext(decode(ins,31,12)<<12,32)
+  imm_j = sign_ext(decode(ins,31,31)<<20 | decode(ins,30,21)<<1 | decode(ins,21,20)<<11 | decode(ins,19,12)<<12,21)
 
+  #decode destination reg
+  rd = decode(ins,11,7)
+
+  #decode source regs
+  rs1 = decode(ins,19,15)
+  rs2 = decode(ins,24,20)
+
+  #decode functs
+  funct3 = Funct3(decode(ins,14,12))
+  funct7 = decode(ins,31,25)
+
+  print(ins)
   print(opcode)
-  regdump()
-
+  
   return False
 
 def regdump():
