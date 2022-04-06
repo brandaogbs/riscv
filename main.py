@@ -161,14 +161,17 @@ def pipeline():
 	funct3 = Funct3(decode(ins,14,12))
 	funct7 = decode(ins,31,25)
 
-	print("%x %8x %r"% (regfile[PC], ins, opcode))
+	print("%08x: %08x %r"% (regfile[PC], ins, opcode))
 	if opcode == Opcode.JAL:
 		regfile[PC] += imm_j 
+		return True
 	elif opcode == Opcode.IMM:
-		print(funct3)
 		if funct3 == Funct3.ADDI:
 			regfile[rd] = regfile[rs1] + imm_i
-			regfile[PC] += 4	
+	elif opcode == Opcode.AUIPC:
+		regfile[rd] = regfile[PC] + imm_u	
+
+	regfile[PC] += 4
 	return True
 
 def regdump():
